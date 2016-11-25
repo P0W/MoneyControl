@@ -4,9 +4,6 @@ import re
 
 class UrlOpener( object ):
     def __init__(self, url):
-        proxy = ProxyHandler({'http': 'http://approxy.rockwellcollins.com:9090'})
-        opener = build_opener(proxy)
-        install_opener(opener)
         self.url = url
 
     def contents(self):
