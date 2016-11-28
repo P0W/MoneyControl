@@ -1,4 +1,4 @@
-
+## Author : Prashant
 ## Grab stocks data from MoneyControl.com
 
 ##1. Zero Debt
@@ -35,7 +35,9 @@ class StockDB( object ):
                 Total_Asset REAL NOT NULL,
                 Cash_Flow REAL NOT NULL,
                 Cash_to_Market REAL NOT NULL,
-                Pomoters_Stake_Pledged TEXT NOT NULL
+                Pomoters_Stake_Pledged TEXT NOT NULL,
+                Net_Profit REAL NOT NULL,
+                Sector TEXT NOT NULL
                 );''')
         
         self.connector.commit()
@@ -45,8 +47,8 @@ class StockDB( object ):
             self.cursor.execute("""
             INSERT INTO
                 STOCKSDATA
-                ( Company, Market_Cap, Total_Debt, Total_Asset, Cash_Flow, Cash_to_Market, Pomoters_Stake_Pledged )
-                VALUES( ?,?,?,?,?,?,? );
+                ( Company, Market_Cap, Total_Debt, Total_Asset, Cash_Flow, Cash_to_Market, Pomoters_Stake_Pledged, Net_Profit, Sector )
+                VALUES( ?,?,?,?,?,?,?,?,? );
                 """, values)
 
             self.connector.commit()
@@ -146,11 +148,14 @@ def GrabStocks():
                 Total_Debt =  float( soup.find(text='Total Debt').findNext().get_text().replace(',', '' ) )
                 Total_Asset = float(  soup.findAll(text='Total Assets')[1].findNext().get_text().replace(',', '' ) )
                 Cash_to_Market_cap_ratio = 100.0*Cash_Flow  /  Market_Cap
+                Net_Profit = soup.find('td', text=re.compile("Net Profit"), attrs={'class' : 'thc02 w160 gD_12'}).findNext().get_text()
+                Net_Profit = float( Net_Profit.replace(',','') )
             except:
                 Market_Cap = 1.0
                 Total_Debt = 0.0
                 Total_Asset = 0.0
                 Cash_to_Market_cap_ratio = 0.0
+                Net_Profit = 0.0
 
             values = [
             stocks.get_text(),
@@ -159,7 +164,9 @@ def GrabStocks():
              Total_Asset, ## Total Asset
              Cash_Flow,
              Cash_to_Market_cap_ratio,
-             '%s' % isStakePledged
+             '%s' % isStakePledged,
+            Net_Profit,
+            sites.get_text()
             ]        
             DB.writeData( values )
        
