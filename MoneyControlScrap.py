@@ -12,9 +12,13 @@ from bs4 import BeautifulSoup
 from urllib.request import *
 import re
 import sqlite3
+import csv
 
 class UrlOpener( object ):
     def __init__(self, url):
+        proxy = ProxyHandler({'http': 'http://approxy.rockwellcollins.com:9090'})
+        opener = build_opener(proxy)
+        install_opener(opener)
         self.url = url
 
     def contents(self):
@@ -56,7 +60,8 @@ class StockDB( object ):
             print ('      Already Exists Skipped...')
 
     def displayData(self, sortBY = 'Total_Debt', order = '' ):
-        for row in self.cursor.execute('SELECT * FROM STOCKSDATA ORDER BY %s %s' % (sortBY, order ) ):
+        for row in self.cursor.execute("SELECT * FROM STOCKSDATA ORDER BY %s %s;" % (sortBY, order )
+                                        ):
             print (row)
 
     def companyList(self):
@@ -69,6 +74,21 @@ class StockDB( object ):
         print ('Closing Database')
         self.cursor.close()
         self.connector.close()
+
+    def export(self, csvFile = 'stocks.csv', sortBY = 'Total_Debt', order = '' ):
+        self.cursor.execute('''SELECT Sector, Company, Market_Cap, Total_Asset, Cash_Flow, Net_Profit FROM STOCKSDATA \
+                            WHERE Pomoters_Stake_Pledged LIKE 'FALSE' AND Cash_to_Market > 0 AND Net_Profit>0 \
+                            AND Total_Debt = 0  AND Total_Asset > 0 \
+                            ORDER BY  Sector ASC, \
+                                      Total_Debt ASC, \
+                                      Net_Profit DESC ,\
+                                      Cash_to_Market DESC ,\
+                                      Total_Asset DESC''' \
+                                        )
+        with open( csvFile, "w", newline='') as csv_file:  
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow([i[0] for i in self.cursor.description]) 
+            csv_writer.writerows(self.cursor)
 
 def ReadCashFlow( url ):
     soup =  UrlOpener( url ).contents()
