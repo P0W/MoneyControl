@@ -9,7 +9,7 @@ import csv
 import math
 
 from dateutil.relativedelta import relativedelta
-                 
+
 base_url =r'http://chart.finance.yahoo.com/table.csv?s=%(symbol)s%(fromDate)s%(toDate)s&g=d&ignore=.csv'
 
 def getDate( d ):
@@ -380,7 +380,8 @@ def sum_n( n ):
 
 for s in SP_BSE_ALL_INDEX_A:
     data = pull_historical_data('%s.BO' % s, 200, 5 )
-    
+
+    # https://en.wikipedia.org/wiki/Simple_linear_regression
     close_sum = 0.0
     close_square = 0.0
     close_sum_square = 0.0
@@ -399,9 +400,14 @@ for s in SP_BSE_ALL_INDEX_A:
     n = len(data)
     slope =  ( n*close_date_sum - sum_n( n )*close_sum ) / ( n*sum_n_sq(n) - sum_n(n)**2 )
     angle = math.atan( slope ) * 180.0/math.pi
+    r = ( n*close_date_sum - sum_n( n )*close_sum   ) / (  math.sqrt( ( n*sum_n_sq(n) - sum_n(n)**2 )* ( n*close_sum_square  - close_sum**2 ) ) )
 
     #print ( '%-20s is %s %% Bullish with Increase rate of %.2f Slope = %.2f degrees' % ( s, BullishScore( data ), ( float(data[-1]['Close']) - float(data[0]['Close']))/len(data), angle ) )
-    print ( '%-20s\t%s\t%.2f\t%.2f\t%.2f\t%.2f' % ( s, BullishScore( data ), ( data[-1]['Close'] - data[0]['Close'] )/n, angle,
+    print ( '%-20s\t%s\t%.2f\t%.2f\t%.2f\t%.2f\t%.2f' % ( s,
+                                                    BullishScore( data ),
+                                                    ( data[-1]['Close'] - data[0]['Close'] )/n,
+                                                    angle,
+                                                    r,
                                                     ( data[-1]['Close'] - min_close )*100/data[-1]['Close'] ,
                                                     ( -data[-1]['Close'] + max_close )*100/max_close ) )
 
