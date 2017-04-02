@@ -8,8 +8,14 @@
 ##5. Less Competition
 
 
-from bs4 import BeautifulSoup
-from urllib.request import *
+try:
+    from bs4 import BeautifulSoup
+except:
+    print ('Install bs4 (pip install bs4)' )
+try:
+    from urllib.request import * 
+except:
+    from urllib2 import * ## Python 2.7
 import re
 import sqlite3
 import csv
@@ -31,6 +37,7 @@ class StockDB( object ):
                  STOCKSDATA
                 (
                 Company TEXT PRIMARY KEY NOT NULL,
+                Symbol TEXT NOT NULL,
                 Market_Cap REAL NOT NULL,
                 Total_Debt REAL NOT NULL,
                 Total_Asset REAL NOT NULL,
@@ -48,18 +55,26 @@ class StockDB( object ):
             self.cursor.execute("""
             INSERT INTO
                 STOCKSDATA
-                ( Company, Market_Cap, Total_Debt, Total_Asset, Cash_Flow, Cash_to_Market, Pomoters_Stake_Pledged, Net_Profit, Sector )
-                VALUES( ?,?,?,?,?,?,?,?,? );
+                ( Company, Symbol, Market_Cap, Total_Debt, Total_Asset, Cash_Flow, Cash_to_Market, Pomoters_Stake_Pledged, Net_Profit, Sector )
+                VALUES( ?,?,?,?,?,?,?,?,?,? );
                 """, values)
 
             self.connector.commit()
         except sqlite3.IntegrityError:
             print ('      Already Exists Skipped...')
 
-    def displayData(self, sortBY = 'Total_Debt', order = '' ):
-        for row in self.cursor.execute("SELECT * FROM STOCKSDATA ORDER BY %s %s;" % (sortBY, order )
-                                        ):
-            print (row)
+    def displayData(self, csvFile = 'stocks_all.csv', sortBy = 'Symbol', order = '' ):
+##        for row in self.cursor.execute("SELECT * FROM STOCKSDATA ORDER BY %s %s;" % (sortBY, order )
+##                                        ):
+##            print (row)
+
+        self.cursor.execute("SELECT * FROM STOCKSDATA ORDER BY %s %s;" % (sortBy, order )
+                )
+        
+        with open( csvFile, "wb") as csv_file:  
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerow([i[0] for i in self.cursor.description]) 
+            csv_writer.writerows(self.cursor)
 
     def companyList(self):
         res = []
@@ -72,8 +87,8 @@ class StockDB( object ):
         self.cursor.close()
         self.connector.close()
 
-    def export(self, csvFile = 'stocks.csv', sortBY = 'Total_Debt', order = '' ):
-        self.cursor.execute('''SELECT Sector, Company, Market_Cap, Total_Asset, Cash_Flow, Net_Profit FROM STOCKSDATA \
+    def export(self, csvFile = 'stocks.csv', sortBy = 'Total_Debt', order = '' ):
+        self.cursor.execute('''SELECT Sector, Symbol, Market_Cap, Total_Asset, Cash_Flow, Net_Profit FROM STOCKSDATA \
                             WHERE Pomoters_Stake_Pledged LIKE 'FALSE' AND Cash_to_Market > 0 AND Net_Profit>0 \
                             AND Total_Debt = 0  AND Total_Asset > 0 \
                             ORDER BY  Sector ASC, \
@@ -82,7 +97,8 @@ class StockDB( object ):
                                       Cash_to_Market DESC ,\
                                       Total_Asset DESC''' \
                                         )
-        with open( csvFile, "w", newline='') as csv_file:  
+        
+        with open( csvFile, "wb") as csv_file:  
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow([i[0] for i in self.cursor.description]) 
             csv_writer.writerows(self.cursor)
@@ -159,7 +175,12 @@ def GrabStocks():
             except:
                 isStakePledged = True
 
-            try:      
+            try:
+                try:
+                    symbol = soup.find(text=re.compile("NSE\s*:\s*(\S+?)")).replace( 'NSE:', '').strip()
+                except:
+                    symbol = 'N/A'
+                    print ( 'Not Traded on NSE %s' % stocks.get_text() ) 
                 Market_Cap = soup.find(text='MARKET CAP (Rs Cr)').findNext().get_text(),
                 Market_Cap = float(Market_Cap[0].replace(',',''))
                 Total_Debt =  float( soup.find(text='Total Debt').findNext().get_text().replace(',', '' ) )
@@ -176,6 +197,7 @@ def GrabStocks():
 
             values = [
             stocks.get_text(),
+            symbol,
              Market_Cap ,
              Total_Debt, ## Total Debt
              Total_Asset, ## Total Asset
@@ -189,7 +211,7 @@ def GrabStocks():
        
 
 def Display( sortBy = 'Total_Debt', order ='' ):            
-    StockDB().displayData( sortBy, order )
+    StockDB().displayData( sortBy = sortBy , order = order )
 
         
 
